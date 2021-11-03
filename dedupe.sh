@@ -10,4 +10,4 @@
 #SBATCH --mail-user='tpersse@uoregon.edu'
 #SBATCH --mail-type=END,FAIL
 
-/usr/bin/time -v python one_more.py  -f ./sorted_C1_SE.sam -u ./STL96.txt -p
+/usr/bin/time -v python persse_deduper.py  -f ./sorted_C1_SE.sam -u ./STL96.txt
