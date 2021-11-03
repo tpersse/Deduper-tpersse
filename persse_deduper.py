@@ -11,7 +11,7 @@ def getArgs():
 		"-p", "--paired", help="If flag is set, allows for paired end sam deduping if enabled. Paired end functionality is not yet included in this script.", action="store_true", required=False
 	)
 	parser.add_argument(
-		"-u", "--umi", help="Absolute path to file containing UMIs, if provided", action="store_true", type=str, required=False
+		"-u", "--umi", help="Absolute path to file containing UMIs, if provided", action="store_true", type=str, required=True
 	)
 
 	return parser.parse_args()
