@@ -80,6 +80,24 @@ if __name__ == "main":
 	assert rev_strand_pos('10S90M2I90D90S', 0) == 270
 	assert rev_strand_pos('90M2I90D90S', 0) == 270
 
+def read_replace(read, umi:str, unique_dict:dict):
+	start = read.reference_start
+	cigar = read.cigarstring
+	qual = read.query_qualities
+	if ((flag & 16) == 16):
+		start = rev_strand_pos(cigar, start)
+		if start in unique_dict[umi]['reverse'].keys():
+			if mean_qual_score(qual) > mean_qual_score(unique_dict[umi]['reverse'][start].query_qualities):
+				unique_dict[umi]['reverse'][start] = read
+		else:
+			unique_dict[umi]['reverse'][start] = read
+	else: 
+		if 'S' in cigar:
+			start = softclip_fix(cigar, start)
+		if start not in unique_dict[umi]['forward'].keys():
+			unique_dict[umi]['forward'][start] = read
+	# return(unique_dict)
+
 ## establishing args as variables to be opened
 randomer = False
 f = args.alignment_file # variable to store input file name
@@ -89,7 +107,7 @@ if args.umi: # checks to see if UMIs file is included
 else:
 	randomer=True # if randomer true, we know the umis will only be present in headers. 
 out = f.split('.bam')
-o = out[-2] + '_deduped.bam'
+o = out[-2] + '_deduped_test.bam'
 
 ### global variables ###
 unique_dict = {}
@@ -104,9 +122,7 @@ bam_in = pysam.AlignmentFile(f, 'rb')
 bam_out = pysam.AlignmentFile(o, 'wb', template=bam_in)
 
 # if we are not starting with an UMIs file, we have to create the UMI_set on the fly... or so I think.
-if randomer:
-	umi_set = set()
-else:
+if not randomer:
 	with open(u, 'r') as umis:
 		# open umis file, read through and add each umi to a set of all umis
 		for line in umis:
@@ -119,75 +135,47 @@ else:
 			unique_dict[umi] = {'reverse' : {}, 'forward' : {}}
 	
 	# open input sam file, write all lines starting with @ to the outpu file
-for read in bam_in: 
-	header = read.query_name
-	umi = header.split(':')[-1]
-	if randomer:
-		if umi not in unique_dict:
-			unique_dict[umi] = {'reverse' : {}, 'forward' : {}}
-	flag = read.flag
-	start = read.reference_start
-	cigar = read.cigarstring
-	qual = read.query_qualities # do I use this value?
-	chromo = read.reference_name
-	# need to assign current chromo value before entering loop, if this is the first line
-	if first == True:
-		current_chromo = chromo
-		first = False
-		# forgot to add the below section in, adds first read to counter
-		if ((flag & 16) == 16):
-			start = rev_strand_pos(cigar, start)
-			if start not in unique_dict[umi]['reverse'].keys():
-						unique_dict[umi]['reverse'][start] = read
-		else: 
-			if 'S' in cigar:
-				start = softclip_fix(cigar, start)
-			if start not in unique_dict[umi]['forward'].keys():
-				unique_dict[umi]['forward'][start] = read
-
-	else:
-		if chromo == current_chromo: # if still in the same chromosome, we continue reading in data
-			
-			if umi in unique_dict.keys():
-				if ((flag & 16) == 16):
-					start = rev_strand_pos(cigar, start)
-					if start not in unique_dict[umi]['reverse'].keys():
-						unique_dict[umi]['reverse'][start] = read
-				else: 
-					if 'S' in cigar:
-						start = softclip_fix(cigar, start)
-					if start not in unique_dict[umi]['forward'].keys():
-						unique_dict[umi]['forward'][start] = read
-					
-					# optional section to keep highest quality read encountered per umi.
-					# if start in unique_dict.keys():
-					# 		# optional section to keep highest quality read encountered per umi.
-					# 		if qual > mean_qual_score(unique_dict[start][10]):
-					# 			unique_dict[start] = line
-
-		else: # if not on the same chromosome, we start writing
-			# the writing part
-			for entry in unique_dict.values():
-				for direction in entry.values():
-					for part in direction.values():
-						bam_out.write(part)
-			# after writing contents of the dicitonary, reset dicitonary for next chromosome
-			for umi in umis_set:
+if p: # here, we're gong to add in the portion that will perform paired-end deduplication. 
+	print('work in progress')
+	
+else:
+	for read in bam_in: 
+		header = read.query_name
+		umi = header.split(':')[-1]
+		if randomer:
+			if umi not in unique_dict:
 				unique_dict[umi] = {'reverse' : {}, 'forward' : {}}
-			print(current_chromo)
-			current_chromo = chromo # setting the current chromosome to the new chromosome encountered on this line
-			if umi in unique_dict.keys():
-				if ((flag & 16) == 16):
-					start = rev_strand_pos(cigar, start)
-					if start not in unique_dict[umi]['reverse'].keys():
-						unique_dict[umi]['reverse'][start] = read
-				else: 
-					if 'S' in cigar: # checks for forward read softclipping
-						start = softclip_fix(cigar, start)
-					if start not in unique_dict[umi]['forward'].keys():
-						unique_dict[umi]['forward'][start] = read
-# for the last portion which is excluded from our for loop above, since the final chromosome in the sorted file will be excluded from the writing portion.
-for entry in unique_dict.values():
-	for direction in entry.values():
-		for part in direction.values():
-			bam_out.write(part)
+		flag = read.flag
+		start = read.reference_start
+		cigar = read.cigarstring
+		qual = read.query_qualities # do I use this value?
+		chromo = read.reference_name
+		# need to assign current chromo value before entering loop, if this is the first line
+		if first == True:
+			current_chromo = chromo
+			first = False
+			# forgot to add the below section in, adds first read to counter
+			read_replace(read, umi, unique_dict)
+		else:
+			if chromo == current_chromo: # if still in the same chromosome, we continue reading in data
+				if umi in unique_dict.keys():
+					read_replace(read, umi, unique_dict)
+
+			else: # if not on the same chromosome, we start writing
+				# the writing part
+				for entry in unique_dict.values():
+					for direction in entry.values():
+						for part in direction.values():
+							bam_out.write(part)
+				# after writing contents of the dicitonary, reset dicitonary for next chromosome
+				for umi in umis_set:
+					unique_dict[umi] = {'reverse' : {}, 'forward' : {}}
+				print(current_chromo)
+				current_chromo = chromo # setting the current chromosome to the new chromosome encountered on this line
+				if umi in unique_dict.keys():
+					read_replace(read, umi, unique_dict)
+	# for the last portion which is excluded from our for loop above, since the final chromosome in the sorted file will be excluded from the writing portion.
+	for entry in unique_dict.values():
+		for direction in entry.values():
+			for part in direction.values():
+				bam_out.write(part)
