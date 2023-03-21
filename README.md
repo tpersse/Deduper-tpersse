@@ -16,3 +16,4 @@ Paired end functionality is still a work in progress.
 python=3.9
 pysam=0.20.0
 All dependencies can be found in the attached .yml file. 
+Note: .yml file contains additional package, samtools, for use in the preprocessing of data entering the pipeline.
