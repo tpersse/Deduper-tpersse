@@ -8,10 +8,10 @@ def getArgs():
 		"-f", "--alignment_file", help="Absolute file path to sorted input SAM file", type=str, required=True
 	)
 	parser.add_argument(
-		"-p", "--paired", help="If flag is set, allows for paired end sam deduping if enabled. Paired end functionality is not yet included in this script.", action="store_true", required=False
+		"-p", "--paired_end", help="If flag is set, allows for paired end sam deduping if enabled. Paired end functionality is not yet included in this script.", action="store_true", required=False
 	)
 	parser.add_argument(
-		"-u", "--umi", help="Absolute path to file containing UMIs, if provided", type=str, required=False, default=None
+		"-u", "--umi_file", help="Absolute path to file containing UMIs, if provided", type=str, required=False, default=None
 		)
 	return parser.parse_args()
 
@@ -101,9 +101,9 @@ def read_replace(read, umi:str, unique_dict:dict):
 ## establishing args as variables to be opened
 randomer = False
 f = args.alignment_file # variable to store input file name
-p = args.paired # T/F variable to tell if the data is paired end.
-if args.umi: # checks to see if UMIs file is included
-	u = args.umi
+p = args.paired_end # T/F variable to tell if the data is paired end.
+if args.umi_file: # checks to see if UMIs file is included
+	u = args.umi_file
 else:
 	randomer=True # if randomer true, we know the umis will only be present in headers. 
 out = f.split('.bam')
@@ -136,7 +136,7 @@ if not randomer:
 	
 	# open input sam file, write all lines starting with @ to the outpu file
 if p: # here, we're gong to add in the portion that will perform paired-end deduplication. 
-	print('work in progress')
+	print('work in progress, please give merged/single-end reads for now')
 	
 else:
 	for read in bam_in: 
