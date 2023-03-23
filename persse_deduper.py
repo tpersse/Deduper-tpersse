@@ -1,6 +1,4 @@
-import argparse
-import re
-import pysam
+import argparse,re,pysam
 
 parser = argparse.ArgumentParser()
 def getArgs():
@@ -96,7 +94,6 @@ def read_replace(read, umi:str, unique_dict:dict):
 			start = softclip_fix(cigar, start)
 		if start not in unique_dict[umi]['forward'].keys():
 			unique_dict[umi]['forward'][start] = read
-	# return(unique_dict)
 
 ## establishing args as variables to be opened
 randomer = False
@@ -128,13 +125,9 @@ if not randomer:
 		for line in umis:
 			line=line.strip()
 			umis_set.add(line)
-
 		# add all umis to unique dict as key, whose value is a dictionary
-	
 		for umi in umis_set:
 			unique_dict[umi] = {'reverse' : {}, 'forward' : {}}
-	
-	# open input sam file, write all lines starting with @ to the outpu file
 if p: # here, we're gong to add in the portion that will perform paired-end deduplication. 
 	print('work in progress, please give merged/single-end reads for now')
 	
@@ -146,9 +139,6 @@ else:
 			if umi not in unique_dict:
 				unique_dict[umi] = {'reverse' : {}, 'forward' : {}}
 		flag = read.flag
-		start = read.reference_start
-		cigar = read.cigarstring
-		qual = read.query_qualities # do I use this value?
 		chromo = read.reference_name
 		# need to assign current chromo value before entering loop, if this is the first line
 		if first == True:
